@@ -1,0 +1,8 @@
+cmake-build-debug/
+cmake-build-release/
+.idea/
+*.o
+*.a
+MCP_final
+data/*.csv
+data/*.zip
