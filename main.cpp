@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <mpi.h>
 
 #include "data_loader.h"
 #include "analytics.h"
