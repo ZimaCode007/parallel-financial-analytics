@@ -3,6 +3,7 @@
 #include <mpi.h>
 #include <cstring>
 #include <stdexcept>
+#include <climits>
 #include "data_partitioner.h"
 
 /* ── Constructor ─────────────────────────────────────────────────── */
