@@ -32,6 +32,22 @@ public:
     /** Return the path this loader was constructed with. */
     const std::string& path() const { return file_path_; }
 
+    /**
+     * 从已加载的数据集中随机采样指定比例的记录。
+     *
+     * 使用 Fisher-Yates 洗牌算法随机打乱后截取前 ratio*N 条，
+     * 保证每条记录被选中的概率相等。
+     *
+     * @param records  完整数据集（不修改原向量）
+     * @param ratio    采样比例，取值 (0.0, 1.0]；如 0.5 表示 50%
+     * @param seed     随机种子，相同种子产生相同采样结果（可复现）
+     * @return         采样后的 Transaction 向量
+     */
+    static std::vector<Transaction> sample(
+        const std::vector<Transaction>& records,
+        double ratio,
+        unsigned int seed = 42);
+
 private:
     std::string file_path_;
 

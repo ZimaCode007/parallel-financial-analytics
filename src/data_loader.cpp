@@ -4,21 +4,39 @@
 #include <sstream>
 #include <stdexcept>
 #include <iostream>
+#include <algorithm>
+#include <random>
 
-// Expected CSV column indices for the IBM Credit Card Transactions Dataset.
-// Adjust these constants if the column layout of the CSV changes.
+// Column indices for credit_card_transactions.csv
+// Header: Unnamed:0, trans_date_trans_time, cc_num, merchant, category,
+//         amt, first, last, gender, street, city, state, zip, ...
 static constexpr int COL_ID       = 0;
 static constexpr int COL_DATE     = 1;
-static constexpr int COL_AMOUNT   = 2;
+static constexpr int COL_CARD     = 2;
 static constexpr int COL_MERCHANT = 3;
 static constexpr int COL_CATEGORY = 4;
-static constexpr int COL_STATE    = 5;
-static constexpr int COL_CARD     = 6;
-static constexpr int MIN_COLS     = 7;
+static constexpr int COL_AMOUNT   = 5;
+static constexpr int COL_STATE    = 11;
+static constexpr int MIN_COLS     = 12;  // minimum fields required per row
 
+/**
+ * 构造函数：记录 CSV 文件路径，不立即打开文件。
+ *
+ * @param file_path  CSV 文件的完整路径（如 "data/credit_card_transactions.csv"）
+ */
 DataLoader::DataLoader(const std::string& file_path)
     : file_path_(file_path) {}
 
+/**
+ * 从 CSV 文件读取并解析交易记录。
+ *
+ * 逐行读取文件，跳过首行表头和字段数不足的行，
+ * 将每行解析为一个 Transaction 对象后追加到返回向量。
+ *
+ * @param max_rows  最多读取的行数；0 表示不限，读取全部数据。
+ * @return          解析成功的 Transaction 对象向量，已 shrink_to_fit。
+ * @throws std::runtime_error  文件无法打开时抛出。
+ */
 std::vector<Transaction> DataLoader::load(size_t max_rows) const {
     std::ifstream file(file_path_);
     if (!file.is_open()) {
@@ -68,8 +86,15 @@ std::vector<Transaction> DataLoader::load(size_t max_rows) const {
     return records;
 }
 
-// Split a CSV line into fields. Handles fields enclosed in double-quotes
-// (including quoted fields that contain commas).
+/**
+ * 将单行 CSV 文本拆分为字段数组。
+ *
+ * 支持双引号包裹的字段（字段内可含逗号），
+ * 连续两个双引号（""）被解释为一个字面双引号字符。
+ *
+ * @param line  待解析的 CSV 行字符串（不含换行符）
+ * @return      按逗号分隔的字段字符串向量，顺序与原行一致
+ */
 std::vector<std::string> DataLoader::split_csv_line(const std::string& line) {
     std::vector<std::string> fields;
     std::string field;
@@ -96,35 +121,61 @@ std::vector<std::string> DataLoader::split_csv_line(const std::string& line) {
     return fields;
 }
 
-// Convert a dollar string ("$12.34", "12.34", "-$5.00") to integer cents.
-// The IBM dataset uses a leading '$' sign and two decimal places.
+/**
+ * 将金额字符串转换为整数分（cents）。
+ *
+ * 数据集中金额为无货币符号的十进制字符串（如 "4.97"、"-5.00"）。
+ * 转换时四舍五入到最近的分，避免浮点截断误差。
+ *
+ * @param raw  原始金额字符串，如 "107.23"
+ * @return     以分为单位的整数金额（如 "107.23" → 10723）；空字符串返回 0
+ */
 long long DataLoader::parse_amount_cents(const std::string& raw) {
-    std::string s = raw;
-    // Strip leading/trailing whitespace and currency symbol.
-    while (!s.empty() && (s.front() == ' ' || s.front() == '$')) s.erase(s.begin());
-    while (!s.empty() && s.back() == ' ') s.pop_back();
+    if (raw.empty()) return 0;
+    // std::stod handles leading/trailing whitespace, sign, and scientific notation.
+    double value = std::stod(raw);
+    // Round to nearest cent to avoid floating-point truncation errors.
+    return static_cast<long long>(value * 100.0 + (value >= 0 ? 0.5 : -0.5));
+}
 
-    if (s.empty()) return 0;
+/**
+ * 从数据集中随机采样指定比例的记录。
+ *
+ * 采用 Fisher-Yates 洗牌对索引随机排列后取前 N*ratio 条。
+ * 固定 seed 保证可复现性，便于对比同一子集在不同引擎上的结果。
+ *
+ * @param records  完整数据集（只读，不修改原向量）
+ * @param ratio    采样比例，取值 (0.0, 1.0]；如 0.5 表示随机取 50%
+ * @param seed     随机数种子，默认 42
+ * @return         采样后的 Transaction 向量，大小为 floor(records.size() * ratio)
+ */
+std::vector<Transaction> DataLoader::sample(
+    const std::vector<Transaction>& records,
+    double ratio,
+    unsigned int seed)
+{
+    if (ratio <= 0.0) return {};
+    if (ratio >= 1.0) return records;
 
-    bool negative = false;
-    if (s.front() == '-') { negative = true; s.erase(s.begin()); }
+    size_t sample_size = static_cast<size_t>(
+        static_cast<double>(records.size()) * ratio);
+    if (sample_size == 0) return {};
 
-    // Find the decimal point.
-    auto dot = s.find('.');
-    long long dollars = 0;
-    long long cents   = 0;
+    // 生成索引数组并随机打乱
+    std::vector<size_t> indices(records.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    std::mt19937 rng(seed);
+    std::shuffle(indices.begin(), indices.end(), rng);
 
-    if (dot == std::string::npos) {
-        dollars = std::stoll(s);
-    } else {
-        dollars = std::stoll(s.substr(0, dot));
-        std::string frac = s.substr(dot + 1);
-        // Normalise fractional part to exactly 2 digits.
-        while (frac.size() < 2) frac += '0';
-        if (frac.size() > 2) frac = frac.substr(0, 2);
-        cents = std::stoll(frac);
+    // 取前 sample_size 个索引对应的记录
+    std::vector<Transaction> sampled;
+    sampled.reserve(sample_size);
+    for (size_t i = 0; i < sample_size; ++i) {
+        sampled.push_back(records[indices[i]]);
     }
 
-    long long result = dollars * 100 + cents;
-    return negative ? -result : result;
+    std::cout << "[DataLoader] Sampled " << sampled.size()
+              << " / " << records.size() << " records ("
+              << static_cast<int>(ratio * 100) << "%)\n";
+    return sampled;
 }
