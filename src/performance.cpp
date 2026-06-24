@@ -5,6 +5,18 @@
 #include <iostream>
 #include <vector>
 
+/**
+ * 打印多次运行的性能对比表格。
+ *
+ * 以 stats[0] 作为顺序执行基准，计算每条记录相对于基准的
+ * 加速比（Speedup）和效率（Efficiency）并格式化输出。
+ *
+ * Speedup   S(p) = T_sequential / T_parallel
+ * Efficiency E(p) = S(p) / p        （p 为线程数或进程数）
+ *
+ * @param stats  RunStats 向量，首元素必须为顺序执行结果；
+ *               向量为空时函数直接返回，不产生任何输出
+ */
 void print_performance_report(const std::vector<RunStats>& stats) {
     if (stats.empty()) return;
 
@@ -37,7 +49,18 @@ void print_performance_report(const std::vector<RunStats>& stats) {
     std::cout << "=================================================================\n\n";
 }
 
+/**
+ * 打印单次分析结果的摘要，包含基本统计量和 group-by Top-N 排名。
+ *
+ * 金额以美元格式（$X.XX）显示，group-by 结果按总额降序排列后取前 top_n 条。
+ * 该函数仅用于结果展示，不修改 result 的任何字段。
+ *
+ * @param result  待展示的分析结果（AnalyticsResult）
+ * @param top_n   group-by 排行中展示的最大条数，默认为 5；
+ *                若分组数量少于 top_n，则全部展示
+ */
 void print_analytics_summary(const Analytics::AnalyticsResult& result, size_t top_n) {
+    // Lambda：将整数分转为带符号的美元字符串，如 10723 → "$107.23"
     auto format_dollars = [](long long cents) -> std::string {
         long long abs_cents = cents < 0 ? -cents : cents;
         std::string s = std::to_string(abs_cents / 100) + "." +
@@ -52,7 +75,7 @@ void print_analytics_summary(const Analytics::AnalyticsResult& result, size_t to
     std::cout << "  Average      : " << format_dollars(static_cast<long long>(result.average_cents)) << "\n";
     std::cout << "  Maximum      : " << format_dollars(result.max_cents) << "\n";
 
-    // Sort group-by maps by descending total and print top-N.
+    // Lambda：对给定 group-by map 按值降序排列并打印前 top_n 项
     auto print_top = [&](const std::unordered_map<std::string, long long>& m,
                          const std::string& label) {
         std::vector<std::pair<std::string, long long>> v(m.begin(), m.end());

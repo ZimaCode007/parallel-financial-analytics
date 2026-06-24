@@ -7,6 +7,12 @@
 
 /* ── Constructor ─────────────────────────────────────────────────── */
 
+/**
+ * 构造函数：从 MPI 运行时读取当前进程的 rank 和通信域大小。
+ *
+ * 必须在 MPI_Init 调用之后构造，否则行为未定义。
+ * 构造后 rank_ 和 world_size_ 在整个生命周期内保持不变。
+ */
 MpiEngine::MpiEngine() {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
     MPI_Comm_size(MPI_COMM_WORLD, &world_size_);
@@ -14,13 +20,23 @@ MpiEngine::MpiEngine() {
 
 /* ── Main entry point ────────────────────────────────────────────── */
 
+/**
+ * 使用 MPI 分布式并行执行完整的金融分析任务。
+ *
+ * 执行流程（所有 rank 均需调用）：
+ *   1. rank 0 将数据集按 rank 数均分，并将各分区大小广播给所有 rank。
+ *   2. rank 0 将交易记录序列化为 PackedTx，通过 MPI_Scatterv 分发。
+ *   3. 每个 rank 对本地数据独立计算 sum、max 及两个 group-by map。
+ *   4. 用 MPI_Reduce 将标量结果归约到 rank 0。
+ *   5. 各 rank 将 group-by map 序列化后通过 MPI_Gatherv 收集到 rank 0，
+ *      rank 0 反序列化后合并为最终结果。
+ *
+ * @param records  完整交易记录（仅 rank 0 需要有效数据，其余 rank 传空向量即可）
+ * @return         AnalyticsResult，仅 rank 0 的返回值有效；
+ *                 其他 rank 返回默认构造的空结果
+ */
 Analytics::AnalyticsResult MpiEngine::run(const std::vector<Transaction>& records) const {
     /* ── Step 1: Root partitions and scatters chunks ──────────────── */
-
-    // Serialise each Transaction to a flat byte buffer for MPI transfer.
-    // We use a fixed-size struct approach: encode each Transaction as a
-    // newline-terminated CSV string and send per-rank byte arrays.
-    // For simplicity we broadcast sizes first, then send data.
 
     // Build per-rank chunk sizes (in number of transactions) on root.
     std::vector<int> chunk_sizes(world_size_, 0);
@@ -39,19 +55,21 @@ Analytics::AnalyticsResult MpiEngine::run(const std::vector<Transaction>& record
 
     /* ── Serialise and scatter transaction data ───────────────────── */
 
-    // Each transaction is sent as a packed fixed-size record:
-    //   [ id(8) | amount_cents(8) | category_len(4) | category(64) |
-    //     state_len(4) | state(8) ]
-    // Using a simple flat struct avoids a custom MPI datatype while
-    // keeping the scatter straightforward.
-
+    // Fixed-size record for MPI transfer.  All fields are POD so the struct
+    // has no hidden padding on LP64 platforms (verified by static_assert).
     struct PackedTx {
         long long id;
         long long amount_cents;
         char      category[64];
         char      state[8];
     };
-    static_assert(sizeof(PackedTx) == 8 + 8 + 64 + 8, "PackedTx layout mismatch");
+    static_assert(sizeof(PackedTx) == 88, "PackedTx must be exactly 88 bytes");
+
+    // Register a contiguous MPI datatype sized to one PackedTx so that
+    // Scatterv counts are in transactions (not bytes), avoiding unit confusion.
+    MPI_Datatype mpi_packed_tx;
+    MPI_Type_contiguous(static_cast<int>(sizeof(PackedTx)), MPI_BYTE, &mpi_packed_tx);
+    MPI_Type_commit(&mpi_packed_tx);
 
     std::vector<PackedTx> send_buf;
     std::vector<int> displs(world_size_, 0);
@@ -62,7 +80,6 @@ Analytics::AnalyticsResult MpiEngine::run(const std::vector<Transaction>& record
             send_buf[i].id           = records[i].id;
             send_buf[i].amount_cents = records[i].amount_cents;
 
-            // strncpy with zero-fill ensures no uninitialised padding bytes.
             std::memset(send_buf[i].category, 0, sizeof(send_buf[i].category));
             std::strncpy(send_buf[i].category,
                          records[i].merchant_category.c_str(),
@@ -80,10 +97,13 @@ Analytics::AnalyticsResult MpiEngine::run(const std::vector<Transaction>& record
 
     std::vector<PackedTx> recv_buf(my_chunk_size);
 
+    // counts and displs are now in units of mpi_packed_tx (one transaction each).
     MPI_Scatterv(
-        send_buf.data(), chunk_sizes.data(), displs.data(), MPI_BYTE,
-        recv_buf.data(), my_chunk_size * static_cast<int>(sizeof(PackedTx)), MPI_BYTE,
+        send_buf.data(), chunk_sizes.data(), displs.data(), mpi_packed_tx,
+        recv_buf.data(), my_chunk_size, mpi_packed_tx,
         0, MPI_COMM_WORLD);
+
+    MPI_Type_free(&mpi_packed_tx);
 
     /* ── Step 2: Each rank computes local aggregates ──────────────── */
 
@@ -118,7 +138,7 @@ Analytics::AnalyticsResult MpiEngine::run(const std::vector<Transaction>& record
     int cat_size   = static_cast<int>(cat_buf.size());
     int state_size = static_cast<int>(state_buf.size());
 
-    // Gather buffer sizes first.
+    // Gather buffer sizes first so root can allocate the receive buffer.
     std::vector<int> cat_sizes(world_size_), state_sizes(world_size_);
     MPI_Gather(&cat_size,   1, MPI_INT, cat_sizes.data(),   1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Gather(&state_size, 1, MPI_INT, state_sizes.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -177,7 +197,15 @@ Analytics::AnalyticsResult MpiEngine::run(const std::vector<Transaction>& record
 
 /* ── Serialisation ───────────────────────────────────────────────── */
 
-// Wire format: repeated [ key_len(4 bytes) | key bytes | value(8 bytes) ]
+/**
+ * 将 group-by map 序列化为字节缓冲区，用于 MPI 传输。
+ *
+ * 线格式（每条键值对）：[ key_len(4字节) | key字符串 | value(8字节) ]
+ * key_len 和 value 均以本机字节序存储（MPI 同构通信域内安全）。
+ *
+ * @param m   待序列化的字符串到 long long 的映射
+ * @return    序列化后的字节向量，可直接传入 MPI_Send / MPI_Gatherv
+ */
 std::vector<char> MpiEngine::serialise_map(
     const std::unordered_map<std::string, long long>& m)
 {
@@ -198,6 +226,16 @@ std::vector<char> MpiEngine::serialise_map(
     return buf;
 }
 
+/**
+ * 将 serialise_map 产生的字节缓冲区反序列化为 group-by map。
+ *
+ * 按顺序读取每条 [ key_len | key | value ] 记录，
+ * 遇到截断或格式错误时提前终止（静默跳过剩余数据）。
+ * 相同键的值相加，支持将多个部分 map 的序列化结果拼接后一次反序列化。
+ *
+ * @param buf  由 serialise_map 生成的字节缓冲区
+ * @return     反序列化后的字符串到 long long 的映射
+ */
 std::unordered_map<std::string, long long> MpiEngine::deserialise_map(
     const std::vector<char>& buf)
 {

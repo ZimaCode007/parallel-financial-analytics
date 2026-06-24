@@ -6,3 +6,4 @@ cmake-build-release/
 MCP_final
 data/*.csv
 data/*.zip
+.claude/
