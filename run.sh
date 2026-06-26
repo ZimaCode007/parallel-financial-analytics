@@ -8,8 +8,8 @@
 CSV_PATH="../data/credit_card_transactions.csv"   # 数据集路径
 MAX_ROWS=0                                         # 加载行数（0=全部）
 OMP_THREADS=4                                     # OpenMP 线程数
-MPI_PROCS=4                                        # MPI 进程数
-SAMPLE_RATIO=0.2                                   # 采样比例：1.0=全部数据，0.5=随机50%
+MPI_PROCS=2                                       # MPI 进程数
+SAMPLE_RATIO=1                                  # 采样比例：1.0=全部数据，0.5=随机50%
 # ──────────────────────────────────────────────────────────────
 
 BUILD_DIR="$(cd "$(dirname "$0")/cmake-build-debug" && pwd)"
