@@ -12,22 +12,23 @@
 #include "result_io.h"
 
 /**
- * 程序入口：Parallel Financial Analytics Engine
+ * Entry point: Parallel Financial Analytics Engine
  *
- * 支持两种运行方式：
+ * Two execution modes are supported:
  *
- *   方式一（分步运行，互不干扰）：
- *     ./MCP_final <csv_path> seq   [max_rows]                 # 仅跑 Sequential
- *     ./MCP_final <csv_path> omp   [max_rows] [omp_threads]   # 仅跑 OpenMP
- *     mpirun -np 4 ./MCP_final <csv_path> mpi [max_rows]      # 仅跑 MPI
- *     ./MCP_final report                                       # 合并结果生成报告
+ *   Separate-run mode (recommended; engines run independently without contention):
+ *     ./MCP_final <csv_path> seq   [max_rows]                 # Sequential only
+ *     ./MCP_final <csv_path> omp   [max_rows] [omp_threads]   # OpenMP only
+ *     mpirun -np 4 ./MCP_final <csv_path> mpi [max_rows]      # MPI only
+ *     ./MCP_final report                                       # Merge results and generate report
  *
- *   方式二（一次性全部运行，向后兼容）：
+ *   Combined mode (all engines in one invocation; backward-compatible):
  *     ./MCP_final <csv_path> all   [max_rows] [omp_threads]
  *     mpirun -np 4 ./MCP_final <csv_path> all [max_rows] [omp_threads]
  *
- *   每个分步模式会将结果保存到 results/ 目录下的 .result 文件中。
- *   report 模式读取这些文件并生成合并的性能对比报告和 report.html。
+ *   Each separate-run mode saves results to a .result file under results/.
+ *   The report mode reads those files and produces a combined performance
+ *   comparison report and report.html.
  */
 
 static void print_usage(const char* prog) {
@@ -56,12 +57,12 @@ int main(int argc, char* argv[]) {
 
     std::string arg1 = argv[1];
 
-    /* ── report 模式：合并已有结果文件并生成报告 ──────────────────── */
+    /* ── report mode: merge existing result files and generate report ── */
     if (arg1 == "report") {
         if (mpi_rank == 0) {
             std::vector<RunStats> stats;
             std::string results_dir = "results";
-            // 按固定顺序读取：seq → omp → mpi
+            // Load in fixed order: seq → omp → mpi
             std::string files[] = {
                 results_dir + "/seq.result",
                 results_dir + "/omp.result",
@@ -79,14 +80,14 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
             print_performance_report(stats);
-            // 从 seq.result 中无法得知原始 csv_path，用占位符
+            // The original csv_path is not stored in seq.result; use a placeholder.
             generate_html_report("report.html", stats, "(merged from separate runs)");
         }
         MPI_Finalize();
         return 0;
     }
 
-    /* ── 其余模式需要 csv_path 和 mode ───────────────────────────── */
+    /* ── All other modes require csv_path and mode ───────────────── */
     if (argc < 3) {
         if (mpi_rank == 0) print_usage(argv[0]);
         MPI_Finalize();
@@ -99,7 +100,7 @@ int main(int argc, char* argv[]) {
     int omp_threads         = (argc >= 5) ? std::stoi(argv[4])   : 0;
     double sample_ratio     = (argc >= 6) ? std::stod(argv[5])   : 1.0;
 
-    // 创建 results 目录
+    // Create results directory if it does not exist.
     if (mpi_rank == 0) {
         std::filesystem::create_directories("results");
     }
@@ -108,7 +109,7 @@ int main(int argc, char* argv[]) {
     bool run_omp = (mode == "omp" || mode == "all");
     bool run_mpi = (mode == "mpi" || mode == "all");
 
-    /* ── 加载数据（rank 0 加载，可选随机采样） ───────────────────── */
+    /* ── Load data on rank 0 (with optional random sampling) ────── */
     std::vector<Transaction> records;
     if (mpi_rank == 0) {
         DataLoader loader(csv_path);
@@ -172,14 +173,14 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    /* ── 输出报告 ─────────────────────────────────────────────────── */
+    /* ── Output report ───────────────────────────────────────────── */
     if (mpi_rank == 0 && !stats.empty()) {
-        // all 模式直接生成完整报告
+        // In "all" mode generate the full report immediately.
         if (mode == "all") {
             print_performance_report(stats);
             generate_html_report("report.html", stats, csv_path);
         } else {
-            // 分步模式提示用户最后执行 report
+            // In separate-run mode remind the user to run the report step.
             std::cout << "\n[Hint] Run '" << argv[0]
                       << " report' to merge all results and generate report.html\n";
         }

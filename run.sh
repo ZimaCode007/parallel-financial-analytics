@@ -1,23 +1,23 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-#  Parallel Financial Analytics Engine — 运行脚本
-#  修改下方参数后，在终端执行：  bash run.sh
+#  Parallel Financial Analytics Engine — run script
+#  Edit the parameters below, then run:  bash run.sh
 # ═══════════════════════════════════════════════════════════════
 
-# ── 参数配置（按需修改） ──────────────────────────────────────
-CSV_PATH="../data/credit_card_transactions.csv"   # 数据集路径
-MAX_ROWS=0                                         # 加载行数（0=全部）
-OMP_THREADS=4                                     # OpenMP 线程数
-MPI_PROCS=2                                       # MPI 进程数
-SAMPLE_RATIO=1                                  # 采样比例：1.0=全部数据，0.5=随机50%
+# ── Parameters (edit as needed) ───────────────────────────────
+CSV_PATH="../data/credit_card_transactions.csv"   # Path to the dataset
+MAX_ROWS=0                                         # Rows to load (0 = all)
+OMP_THREADS=4                                     # OpenMP thread count
+MPI_PROCS=2                                       # MPI process count
+SAMPLE_RATIO=1                                  # Sample ratio: 1.0 = all data, 0.5 = random 50%
 # ──────────────────────────────────────────────────────────────
 
 BUILD_DIR="$(cd "$(dirname "$0")/cmake-build-debug" && pwd)"
 BIN="$BUILD_DIR/MCP_final"
 
 if [ ! -f "$BIN" ]; then
-    echo "[Error] 可执行文件不存在: $BIN"
-    echo "        请先在 CLion 中 Build 或执行: cmake --build cmake-build-debug"
+    echo "[Error] Binary not found: $BIN"
+    echo "        Build first in CLion or run: cmake --build cmake-build-debug"
     exit 1
 fi
 
@@ -25,10 +25,10 @@ cd "$BUILD_DIR" || exit 1
 
 echo "════════════════════════════════════════════════════════"
 echo "  CSV:          $CSV_PATH"
-echo "  Max Rows:     $MAX_ROWS (0=全部)"
-echo "  OpenMP:       $OMP_THREADS 线程"
-echo "  MPI:          $MPI_PROCS 进程"
-echo "  Sample Ratio: $SAMPLE_RATIO (1.0=全部, 0.5=随机50%)"
+echo "  Max Rows:     $MAX_ROWS (0=all)"
+echo "  OpenMP:       $OMP_THREADS threads"
+echo "  MPI:          $MPI_PROCS processes"
+echo "  Sample Ratio: $SAMPLE_RATIO (1.0=all, 0.5=random 50%)"
 echo "════════════════════════════════════════════════════════"
 echo ""
 
