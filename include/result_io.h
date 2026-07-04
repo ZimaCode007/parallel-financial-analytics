@@ -5,12 +5,13 @@
 #include "performance.h"
 
 /**
- * 结果文件读写模块
+ * Result file I/O module
  *
- * 将单次运行的 RunStats 序列化为纯文本文件（.result），
- * 以及从多个 .result 文件反序列化后合并为完整的 stats 向量。
+ * Serialises a single RunStats object to a plain-text .result file and
+ * deserialises it back.  Multiple .result files can be loaded and combined
+ * into a complete stats vector for report generation.
  *
- * 文件格式（逐行 key=value）：
+ * File format (one key=value per line):
  *   label=OpenMP-4
  *   elapsed_ms=109.60
  *   parallelism=4
@@ -24,18 +25,18 @@
  */
 
 /**
- * 将单次运行结果保存到文本文件。
+ * Save a single run's results to a text file.
  *
- * @param file_path  输出文件路径（如 "results/seq.result"）
- * @param stats      待保存的运行统计
+ * @param file_path  Output file path (e.g. "results/seq.result").
+ * @param stats      Run statistics to save.
  */
 void save_run_stats(const std::string& file_path, const RunStats& stats);
 
 /**
- * 从文本文件加载单次运行结果。
+ * Load a single run's results from a text file.
  *
- * @param file_path  输入文件路径
- * @return           解析后的 RunStats
- * @throws std::runtime_error  文件无法打开时抛出
+ * @param file_path  Input file path.
+ * @return           Parsed RunStats.
+ * @throws std::runtime_error  If the file cannot be opened.
  */
 RunStats load_run_stats(const std::string& file_path);

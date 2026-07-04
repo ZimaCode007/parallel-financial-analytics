@@ -8,10 +8,10 @@
 /* ── Constructor ─────────────────────────────────────────────────── */
 
 /**
- * 构造函数：从 MPI 运行时读取当前进程的 rank 和通信域大小。
+ * Constructor: read this process's rank and communicator size from the MPI runtime.
  *
- * 必须在 MPI_Init 调用之后构造，否则行为未定义。
- * 构造后 rank_ 和 world_size_ 在整个生命周期内保持不变。
+ * Must be constructed after MPI_Init; behaviour is undefined otherwise.
+ * rank_ and world_size_ are immutable for the lifetime of the object.
  */
 MpiEngine::MpiEngine() {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
@@ -21,19 +21,18 @@ MpiEngine::MpiEngine() {
 /* ── Main entry point ────────────────────────────────────────────── */
 
 /**
- * 使用 MPI 分布式并行执行完整的金融分析任务。
+ * Run the full analytics suite in distributed parallel using MPI.
  *
- * 执行流程（所有 rank 均需调用）：
- *   1. rank 0 将数据集按 rank 数均分，并将各分区大小广播给所有 rank。
- *   2. rank 0 将交易记录序列化为 PackedTx，通过 MPI_Scatterv 分发。
- *   3. 每个 rank 对本地数据独立计算 sum、max 及两个 group-by map。
- *   4. 用 MPI_Reduce 将标量结果归约到 rank 0。
- *   5. 各 rank 将 group-by map 序列化后通过 MPI_Gatherv 收集到 rank 0，
- *      rank 0 反序列化后合并为最终结果。
+ * All ranks must call this collectively.  Execution steps:
+ *   1. Rank 0 partitions the dataset and broadcasts per-rank chunk sizes.
+ *   2. Rank 0 serialises transactions into PackedTx and scatters them via MPI_Scatterv.
+ *   3. Each rank independently computes local sum, max, and two group-by maps.
+ *   4. MPI_Reduce collects scalar results on rank 0.
+ *   5. Each rank serialises its group-by maps; MPI_Gatherv collects them on rank 0
+ *      which then deserialises and merges them into the final result.
  *
- * @param records  完整交易记录（仅 rank 0 需要有效数据，其余 rank 传空向量即可）
- * @return         AnalyticsResult，仅 rank 0 的返回值有效；
- *                 其他 rank 返回默认构造的空结果
+ * @param records  Full dataset (only rank 0 needs valid data; other ranks pass empty).
+ * @return         AnalyticsResult valid only on rank 0; other ranks return a default value.
  */
 Analytics::AnalyticsResult MpiEngine::run(const std::vector<Transaction>& records) const {
     /* ── Step 1: Root partitions and scatters chunks ──────────────── */
@@ -198,13 +197,13 @@ Analytics::AnalyticsResult MpiEngine::run(const std::vector<Transaction>& record
 /* ── Serialisation ───────────────────────────────────────────────── */
 
 /**
- * 将 group-by map 序列化为字节缓冲区，用于 MPI 传输。
+ * Serialise a group-by map to a byte buffer for MPI transfer.
  *
- * 线格式（每条键值对）：[ key_len(4字节) | key字符串 | value(8字节) ]
- * key_len 和 value 均以本机字节序存储（MPI 同构通信域内安全）。
+ * Wire format per entry: [ key_len (4 bytes) | key bytes | value (8 bytes) ]
+ * Both key_len and value use native byte order (safe within a homogeneous MPI job).
  *
- * @param m   待序列化的字符串到 long long 的映射
- * @return    序列化后的字节向量，可直接传入 MPI_Send / MPI_Gatherv
+ * @param m   Map of string → long long to serialise.
+ * @return    Byte vector suitable for passing directly to MPI_Send / MPI_Gatherv.
  */
 std::vector<char> MpiEngine::serialise_map(
     const std::unordered_map<std::string, long long>& m)
@@ -227,14 +226,15 @@ std::vector<char> MpiEngine::serialise_map(
 }
 
 /**
- * 将 serialise_map 产生的字节缓冲区反序列化为 group-by map。
+ * Deserialise a byte buffer produced by serialise_map back into a group-by map.
  *
- * 按顺序读取每条 [ key_len | key | value ] 记录，
- * 遇到截断或格式错误时提前终止（静默跳过剩余数据）。
- * 相同键的值相加，支持将多个部分 map 的序列化结果拼接后一次反序列化。
+ * Reads [ key_len | key | value ] records in sequence; stops early on truncation
+ * or malformed data (remaining bytes are silently ignored).
+ * Values for duplicate keys are summed, so multiple serialised partial maps can be
+ * concatenated and deserialised in a single pass.
  *
- * @param buf  由 serialise_map 生成的字节缓冲区
- * @return     反序列化后的字符串到 long long 的映射
+ * @param buf  Byte buffer produced by serialise_map.
+ * @return     Deserialised map of string → long long.
  */
 std::unordered_map<std::string, long long> MpiEngine::deserialise_map(
     const std::vector<char>& buf)

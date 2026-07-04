@@ -9,11 +9,11 @@ namespace Analytics {
 /* ── Basic aggregates ──────────────────────────────────────────────── */
 
 /**
- * 计算区间 [begin, end) 内所有交易金额的总和。
+ * Compute the total amount_cents for all transactions in [begin, end).
  *
- * @param begin  指向区间首个 Transaction 的指针
- * @param end    指向区间末尾（不含）的指针
- * @return       所有 amount_cents 之和，单位为分（cents）；空区间返回 0
+ * @param begin  Pointer to the first Transaction in the range.
+ * @param end    Pointer one past the last Transaction (exclusive).
+ * @return       Sum of amount_cents in cents; 0 for an empty range.
  */
 long long sum(const Transaction* begin, const Transaction* end) {
     long long total = 0;
@@ -24,11 +24,11 @@ long long sum(const Transaction* begin, const Transaction* end) {
 }
 
 /**
- * 计算区间 [begin, end) 内所有交易金额的平均值。
+ * Compute the average amount_cents for transactions in [begin, end).
  *
- * @param begin  指向区间首个 Transaction 的指针
- * @param end    指向区间末尾（不含）的指针
- * @return       平均金额，单位为分（cents）；空区间返回 0.0
+ * @param begin  Pointer to the first Transaction in the range.
+ * @param end    Pointer one past the last Transaction (exclusive).
+ * @return       Average amount in cents; 0.0 for an empty range.
  */
 double avg(const Transaction* begin, const Transaction* end) {
     if (begin == end) return 0.0;
@@ -37,11 +37,11 @@ double avg(const Transaction* begin, const Transaction* end) {
 }
 
 /**
- * 查找区间 [begin, end) 内的最大交易金额。
+ * Find the maximum amount_cents in [begin, end).
  *
- * @param begin  指向区间首个 Transaction 的指针
- * @param end    指向区间末尾（不含）的指针
- * @return       最大 amount_cents，单位为分；空区间返回 LLONG_MIN
+ * @param begin  Pointer to the first Transaction in the range.
+ * @param end    Pointer one past the last Transaction (exclusive).
+ * @return       Maximum amount in cents; LLONG_MIN for an empty range.
  */
 long long max_amount(const Transaction* begin, const Transaction* end) {
     if (begin == end) return LLONG_MIN;
@@ -53,11 +53,11 @@ long long max_amount(const Transaction* begin, const Transaction* end) {
 }
 
 /**
- * 返回区间 [begin, end) 内的交易条数。
+ * Return the number of transactions in [begin, end).
  *
- * @param begin  指向区间首个 Transaction 的指针
- * @param end    指向区间末尾（不含）的指针
- * @return       区间长度（即交易笔数）
+ * @param begin  Pointer to the first Transaction in the range.
+ * @param end    Pointer one past the last Transaction (exclusive).
+ * @return       Length of the range (number of transactions).
  */
 size_t count(const Transaction* begin, const Transaction* end) {
     return static_cast<size_t>(end - begin);
@@ -66,11 +66,11 @@ size_t count(const Transaction* begin, const Transaction* end) {
 /* ── Group-by aggregates ─────────────────────────────────────────── */
 
 /**
- * 按商户类别（merchant_category）对交易金额求和。
+ * Aggregate total amount_cents grouped by merchant_category.
  *
- * @param begin  指向区间首个 Transaction 的指针
- * @param end    指向区间末尾（不含）的指针
- * @return       unordered_map，键为类别字符串，值为该类别交易总额（分）
+ * @param begin  Pointer to the first Transaction in the range.
+ * @param end    Pointer one past the last Transaction (exclusive).
+ * @return       Map of category string → total cents.
  */
 std::unordered_map<std::string, long long>
 group_by_category(const Transaction* begin, const Transaction* end) {
@@ -82,11 +82,11 @@ group_by_category(const Transaction* begin, const Transaction* end) {
 }
 
 /**
- * 按美国州代码（state）对交易金额求和。
+ * Aggregate total amount_cents grouped by US state code.
  *
- * @param begin  指向区间首个 Transaction 的指针
- * @param end    指向区间末尾（不含）的指针
- * @return       unordered_map，键为州代码（如 "CA"），值为该州交易总额（分）
+ * @param begin  Pointer to the first Transaction in the range.
+ * @param end    Pointer one past the last Transaction (exclusive).
+ * @return       Map of state code (e.g. "CA") → total cents.
  */
 std::unordered_map<std::string, long long>
 group_by_state(const Transaction* begin, const Transaction* end) {
@@ -100,12 +100,13 @@ group_by_state(const Transaction* begin, const Transaction* end) {
 /* ── Merge helper ────────────────────────────────────────────────── */
 
 /**
- * 将 src 中的分组统计数据合并到 dst，相同键的值相加。
+ * Merge src into dst by summing values for matching keys.
  *
- * 用于并行场景下合并各线程或各 MPI rank 产生的局部 group-by 结果。
+ * Used to combine partial group-by maps produced by individual threads or
+ * MPI ranks during parallel execution.
  *
- * @param dst  目标 map，合并后在原地更新
- * @param src  源 map（只读），其键值对被累加到 dst 中对应键上
+ * @param dst  Destination map; updated in place.
+ * @param src  Source map (read-only); its values are added to dst.
  */
 void merge_group(std::unordered_map<std::string, long long>& dst,
                  const std::unordered_map<std::string, long long>& src) {
@@ -117,13 +118,13 @@ void merge_group(std::unordered_map<std::string, long long>& dst,
 /* ── Sequential full-analytics baseline ─────────────────────────── */
 
 /**
- * 对完整数据集顺序执行全部分析操作，作为性能基准。
+ * Run all analytics sequentially on the full dataset; used as the performance baseline.
  *
- * 一次遍历无法满足所有指标（sum 和 group-by 各需独立遍历），
- * 此函数按顺序依次调用各聚合函数，结果存入 AnalyticsResult。
+ * Each aggregate function performs its own pass over the data since a single
+ * combined pass would complicate the code without measurable benefit at this scale.
  *
- * @param records  完整交易记录向量（只读）
- * @return         包含 count、sum、avg、max 及两个 group-by 结果的 AnalyticsResult
+ * @param records  Full transaction vector (read-only).
+ * @return         AnalyticsResult containing count, sum, avg, max, and both group-by maps.
  */
 AnalyticsResult run_sequential(const std::vector<Transaction>& records) {
     const Transaction* begin = records.data();

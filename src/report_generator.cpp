@@ -8,10 +8,10 @@
 #include <ctime>
 
 /**
- * 将整数分转为美元字符串（如 10723 → "107.23"）。
+ * Convert integer cents to a dollar string (e.g. 10723 → "107.23").
  *
- * @param cents  金额，单位为分
- * @return       不含 $ 符号的数字字符串
+ * @param cents  Amount in cents.
+ * @return       Numeric string without a $ symbol.
  */
 static std::string cents_to_dollars(long long cents) {
     long long abs_c = cents < 0 ? -cents : cents;
@@ -22,11 +22,11 @@ static std::string cents_to_dollars(long long cents) {
 }
 
 /**
- * 对 group-by map 按值降序排序，返回前 n 个键值对。
+ * Sort a group-by map by value descending and return the top n entries.
  *
- * @param m  原始分组统计 map
- * @param n  返回的最大条数
- * @return   按金额降序排列的 (键, 值) 向量
+ * @param m  Source group-by map.
+ * @param n  Maximum number of entries to return.
+ * @return   (key, value) pairs sorted by amount descending.
  */
 static std::vector<std::pair<std::string, long long>>
 top_n(const std::unordered_map<std::string, long long>& m, size_t n) {
@@ -38,10 +38,10 @@ top_n(const std::unordered_map<std::string, long long>& m, size_t n) {
 }
 
 /**
- * 对字符串进行 HTML 转义，防止特殊字符破坏 HTML 结构。
+ * HTML-escape a string to prevent special characters from breaking HTML structure.
  *
- * @param s  原始字符串
- * @return   转义后的安全字符串（& < > " ' 被替换为实体）
+ * @param s  Raw string.
+ * @return   Safe string with &, <, >, ", and ' replaced by HTML entities.
  */
 static std::string html_escape(const std::string& s) {
     std::string out;
@@ -59,20 +59,20 @@ static std::string html_escape(const std::string& s) {
 }
 
 /**
- * 生成自包含 HTML 报告并写入指定路径。
+ * Generate a self-contained HTML report and write it to the given path.
  *
- * 报告包含四个可视化区域：
- *   1. 概览卡片：记录数、总金额、平均值、最大值
- *   2. 性能对比：执行时间柱状图 + 加速比/效率数值
- *   3. Top-10 商户类别水平条形图
- *   4. Top-10 美国州水平条形图
+ * The report contains four visualisation sections:
+ *   1. Overview cards: record count, total amount, average, maximum.
+ *   2. Performance comparison: execution-time bar chart + speedup/efficiency values.
+ *   3. Top-10 merchant categories horizontal bar chart.
+ *   4. Top-10 US states horizontal bar chart.
  *
- * 所有 CSS、JavaScript 和数据均内嵌在单个 HTML 文件中，
- * 无需网络连接即可在任何浏览器中打开。
+ * All CSS, JavaScript, and data are inlined in a single HTML file that can be
+ * opened in any browser without a network connection.
  *
- * @param file_path  输出文件路径
- * @param stats      RunStats 向量（stats[0] 必须是顺序基准）
- * @param csv_path   数据集路径（仅用于页面标题展示）
+ * @param file_path  Output file path.
+ * @param stats      RunStats vector (stats[0] must be the sequential baseline).
+ * @param csv_path   Dataset path (used only for the page title display).
  */
 void generate_html_report(const std::string& file_path,
                           const std::vector<RunStats>& stats,

@@ -6,13 +6,13 @@
 #include <iostream>
 
 /**
- * 将单次运行结果序列化为纯文本文件。
+ * Serialise a single run's results to a plain-text file.
  *
- * 文件格式为逐行 key=value，group-by 条目用 cat: / state: 前缀区分。
- * 该格式可被 load_run_stats 反序列化。
+ * Format: one key=value pair per line; group-by entries use a cat: or state: prefix.
+ * The file can be read back by load_run_stats.
  *
- * @param file_path  输出文件路径
- * @param stats      待保存的 RunStats 对象
+ * @param file_path  Output file path.
+ * @param stats      RunStats object to save.
  */
 void save_run_stats(const std::string& file_path, const RunStats& stats) {
     std::ofstream out(file_path);
@@ -41,14 +41,14 @@ void save_run_stats(const std::string& file_path, const RunStats& stats) {
 }
 
 /**
- * 从纯文本文件反序列化单次运行结果。
+ * Deserialise a single run's results from a plain-text file.
  *
- * 逐行读取 key=value 对，根据 key 前缀分类填充 RunStats 各字段。
- * 未识别的 key 会被静默忽略。
+ * Reads key=value pairs line by line and fills in RunStats fields by key prefix.
+ * Unrecognised keys are silently ignored.
  *
- * @param file_path  输入文件路径
- * @return           解析后的 RunStats 对象
- * @throws std::runtime_error  文件无法打开时抛出
+ * @param file_path  Input file path.
+ * @return           Parsed RunStats object.
+ * @throws std::runtime_error  If the file cannot be opened.
  */
 RunStats load_run_stats(const std::string& file_path) {
     std::ifstream in(file_path);

@@ -6,16 +6,16 @@
 #include <vector>
 
 /**
- * 打印多次运行的性能对比表格。
+ * Print a formatted performance comparison table for multiple runs.
  *
- * 以 stats[0] 作为顺序执行基准，计算每条记录相对于基准的
- * 加速比（Speedup）和效率（Efficiency）并格式化输出。
+ * stats[0] is treated as the sequential baseline.  Speedup and efficiency
+ * are computed relative to that baseline and printed for every entry.
  *
- * Speedup   S(p) = T_sequential / T_parallel
- * Efficiency E(p) = S(p) / p        （p 为线程数或进程数）
+ * Speedup    S(p) = T_sequential / T_parallel
+ * Efficiency E(p) = S(p) / p   (p = thread or process count)
  *
- * @param stats  RunStats 向量，首元素必须为顺序执行结果；
- *               向量为空时函数直接返回，不产生任何输出
+ * @param stats  RunStats vector; first element must be the sequential result.
+ *               Returns immediately without output when the vector is empty.
  */
 void print_performance_report(const std::vector<RunStats>& stats) {
     if (stats.empty()) return;
@@ -50,17 +50,19 @@ void print_performance_report(const std::vector<RunStats>& stats) {
 }
 
 /**
- * 打印单次分析结果的摘要，包含基本统计量和 group-by Top-N 排名。
+ * Print a summary of a single analytics result, including basic statistics
+ * and the top-N group-by rankings.
  *
- * 金额以美元格式（$X.XX）显示，group-by 结果按总额降序排列后取前 top_n 条。
- * 该函数仅用于结果展示，不修改 result 的任何字段。
+ * Amounts are formatted as dollars ($X.XX).  Group-by results are sorted by
+ * total in descending order and truncated to top_n entries.
+ * This function is display-only; it does not modify the result.
  *
- * @param result  待展示的分析结果（AnalyticsResult）
- * @param top_n   group-by 排行中展示的最大条数，默认为 5；
- *                若分组数量少于 top_n，则全部展示
+ * @param result  AnalyticsResult to display.
+ * @param top_n   Maximum number of group-by entries to show (default 5);
+ *                all entries are shown if fewer than top_n groups exist.
  */
 void print_analytics_summary(const Analytics::AnalyticsResult& result, size_t top_n) {
-    // Lambda：将整数分转为带符号的美元字符串，如 10723 → "$107.23"
+    // Convert integer cents to a signed dollar string, e.g. 10723 → "$107.23".
     auto format_dollars = [](long long cents) -> std::string {
         long long abs_cents = cents < 0 ? -cents : cents;
         std::string s = std::to_string(abs_cents / 100) + "." +
@@ -75,7 +77,7 @@ void print_analytics_summary(const Analytics::AnalyticsResult& result, size_t to
     std::cout << "  Average      : " << format_dollars(static_cast<long long>(result.average_cents)) << "\n";
     std::cout << "  Maximum      : " << format_dollars(result.max_cents) << "\n";
 
-    // Lambda：对给定 group-by map 按值降序排列并打印前 top_n 项
+    // Sort a group-by map by value descending and print the top top_n entries.
     auto print_top = [&](const std::unordered_map<std::string, long long>& m,
                          const std::string& label) {
         std::vector<std::pair<std::string, long long>> v(m.begin(), m.end());
