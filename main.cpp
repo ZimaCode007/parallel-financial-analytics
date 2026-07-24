@@ -7,6 +7,7 @@
 #include "analytics.h"
 #include "omp_engine.h"
 #include "mpi_engine.h"
+#include "hybrid_engine.h"
 #include "performance.h"
 #include "report_generator.h"
 #include "result_io.h"
@@ -20,6 +21,7 @@
  *     ./MCP_final <csv_path> seq   [max_rows]                 # 仅跑 Sequential
  *     ./MCP_final <csv_path> omp   [max_rows] [omp_threads]   # 仅跑 OpenMP
  *     mpirun -np 4 ./MCP_final <csv_path> mpi [max_rows]      # 仅跑 MPI
+ *     mpirun -np 4 ./MCP_final <csv_path> hybrid [max_rows] [omp_threads] # MPI + OpenMP
  *     ./MCP_final report                                       # 合并结果生成报告
  *
  *   方式二（一次性全部运行，向后兼容）：
@@ -35,6 +37,7 @@ static void print_usage(const char* prog) {
               << "  " << prog << " <csv_path> seq   [max_rows] [threads] [sample_ratio]\n"
               << "  " << prog << " <csv_path> omp   [max_rows] [threads] [sample_ratio]\n"
               << "  mpirun -np N " << prog << " <csv_path> mpi [max_rows] [threads] [sample_ratio]\n"
+              << "  mpirun -np N " << prog << " <csv_path> hybrid [max_rows] [threads] [sample_ratio]\n"
               << "  " << prog << " <csv_path> all   [max_rows] [threads] [sample_ratio]\n"
               << "  " << prog << " report\n"
               << "\n"
@@ -61,11 +64,12 @@ int main(int argc, char* argv[]) {
         if (mpi_rank == 0) {
             std::vector<RunStats> stats;
             std::string results_dir = "results";
-            // 按固定顺序读取：seq → omp → mpi
+            // 按固定顺序读取：seq → omp → mpi → hybrid
             std::string files[] = {
                 results_dir + "/seq.result",
                 results_dir + "/omp.result",
-                results_dir + "/mpi.result"
+                results_dir + "/mpi.result",
+                results_dir + "/hybrid.result"
             };
             for (const auto& f : files) {
                 if (std::filesystem::exists(f)) {
@@ -107,6 +111,7 @@ int main(int argc, char* argv[]) {
     bool run_seq = (mode == "seq" || mode == "all");
     bool run_omp = (mode == "omp" || mode == "all");
     bool run_mpi = (mode == "mpi" || mode == "all");
+    bool run_hybrid = (mode == "hybrid" || mode == "all");
 
     /* ── 加载数据（rank 0 加载，可选随机采样） ───────────────────── */
     std::vector<Transaction> records;
@@ -168,6 +173,29 @@ int main(int argc, char* argv[]) {
             save_run_stats("results/mpi.result", s);
 
             std::cout << "\n[MPI – " << mpi_engine.world_size() << " ranks]\n";
+            print_analytics_summary(result);
+        }
+    }
+
+    /* ── Hybrid MPI + OpenMP ─────────────────────────────────────── */
+    if (run_hybrid) {
+        HybridEngine hybrid(omp_threads);
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        Timer t;
+        auto result = hybrid.run(records);
+        double ms = t.elapsed_ms();
+
+        if (mpi_rank == 0) {
+            const int total_workers = hybrid.world_size() * hybrid.omp_threads();
+            RunStats s = {"Hybrid-MPI-" + std::to_string(hybrid.world_size()) +
+                              "xOMP-" + std::to_string(hybrid.omp_threads()),
+                          ms, total_workers, result};
+            stats.push_back(s);
+            save_run_stats("results/hybrid.result", s);
+
+            std::cout << "\n[Hybrid – " << hybrid.world_size() << " MPI ranks × "
+                      << hybrid.omp_threads() << " OpenMP threads]\n";
             print_analytics_summary(result);
         }
     }

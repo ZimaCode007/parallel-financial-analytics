@@ -1,0 +1,10 @@
+run_type,configuration,mpi_processes,omp_threads,elapsed_ms,speedup
+Sequential,Sequential,1,1,335.849,1.000000
+OpenMP,OpenMP-2,1,2,172.296,1.949256
+OpenMP,OpenMP-4,1,4,92.3012,3.638620
+OpenMP,OpenMP-8,1,8,83.7715,4.009108
+MPI,MPI-2,2,1,383.974,0.874666
+MPI,MPI-4,4,1,323.243,1.038999
+MPI,MPI-8,8,1,369.497,0.908936
+Hybrid,MPI-2xOMP-2,2,2,394.695,0.850908
+Hybrid,MPI-2xOMP-4,2,4,379.047,0.886035

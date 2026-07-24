@@ -1,0 +1,4 @@
+dataset=/Users/zimayang/CLionProjects/MCP_final/data/credit_card_transactions.csv
+max_rows=0
+sample_ratio=1.0
+created_at=2026-07-25 01:33:42 CEST

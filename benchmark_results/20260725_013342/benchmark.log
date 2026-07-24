@@ -1,0 +1,216 @@
+[DataLoader] Loaded 1296675 transactions from /Users/zimayang/CLionProjects/MCP_final/data/credit_card_transactions.csv
+[ResultIO] Saved Sequential → results/seq.result
+
+[Sequential]
+--- Analytics Summary ---
+  Record count : 1296675
+  Total amount : $91222428.90
+  Average      : $70.35
+  Maximum      : $28948.90
+  Top 5 by category:
+    grocery_pos                   $14460822.38
+    shopping_pos                  $9307993.61
+    shopping_net                  $8625149.68
+    gas_transport                 $8351732.29
+    home                          $7173928.11
+  Top 5 by state:
+    TX                            $6800917.53
+    NY                            $6006499.03
+    PA                            $5771009.53
+    CA                            $4138078.51
+    OH                            $3396146.66
+-------------------------
+
+[Hint] Run '/Users/zimayang/CLionProjects/MCP_final/cmake-build-debug/MCP_final report' to merge all results and generate report.html
+[DataLoader] Loaded 1296675 transactions from /Users/zimayang/CLionProjects/MCP_final/data/credit_card_transactions.csv
+[ResultIO] Saved OpenMP-2 → results/omp.result
+
+[OpenMP – 2 threads]
+--- Analytics Summary ---
+  Record count : 1296675
+  Total amount : $91222428.90
+  Average      : $70.35
+  Maximum      : $28948.90
+  Top 5 by category:
+    grocery_pos                   $14460822.38
+    shopping_pos                  $9307993.61
+    shopping_net                  $8625149.68
+    gas_transport                 $8351732.29
+    home                          $7173928.11
+  Top 5 by state:
+    TX                            $6800917.53
+    NY                            $6006499.03
+    PA                            $5771009.53
+    CA                            $4138078.51
+    OH                            $3396146.66
+-------------------------
+
+[Hint] Run '/Users/zimayang/CLionProjects/MCP_final/cmake-build-debug/MCP_final report' to merge all results and generate report.html
+[DataLoader] Loaded 1296675 transactions from /Users/zimayang/CLionProjects/MCP_final/data/credit_card_transactions.csv
+[ResultIO] Saved OpenMP-4 → results/omp.result
+
+[OpenMP – 4 threads]
+--- Analytics Summary ---
+  Record count : 1296675
+  Total amount : $91222428.90
+  Average      : $70.35
+  Maximum      : $28948.90
+  Top 5 by category:
+    grocery_pos                   $14460822.38
+    shopping_pos                  $9307993.61
+    shopping_net                  $8625149.68
+    gas_transport                 $8351732.29
+    home                          $7173928.11
+  Top 5 by state:
+    TX                            $6800917.53
+    NY                            $6006499.03
+    PA                            $5771009.53
+    CA                            $4138078.51
+    OH                            $3396146.66
+-------------------------
+
+[Hint] Run '/Users/zimayang/CLionProjects/MCP_final/cmake-build-debug/MCP_final report' to merge all results and generate report.html
+[DataLoader] Loaded 1296675 transactions from /Users/zimayang/CLionProjects/MCP_final/data/credit_card_transactions.csv
+[ResultIO] Saved OpenMP-8 → results/omp.result
+
+[OpenMP – 8 threads]
+--- Analytics Summary ---
+  Record count : 1296675
+  Total amount : $91222428.90
+  Average      : $70.35
+  Maximum      : $28948.90
+  Top 5 by category:
+    grocery_pos                   $14460822.38
+    shopping_pos                  $9307993.61
+    shopping_net                  $8625149.68
+    gas_transport                 $8351732.29
+    home                          $7173928.11
+  Top 5 by state:
+    TX                            $6800917.53
+    NY                            $6006499.03
+    PA                            $5771009.53
+    CA                            $4138078.51
+    OH                            $3396146.66
+-------------------------
+
+[Hint] Run '/Users/zimayang/CLionProjects/MCP_final/cmake-build-debug/MCP_final report' to merge all results and generate report.html
+[DataLoader] Loaded 1296675 transactions from /Users/zimayang/CLionProjects/MCP_final/data/credit_card_transactions.csv
+[ResultIO] Saved MPI-2 → results/mpi.result
+
+[MPI – 2 ranks]
+--- Analytics Summary ---
+  Record count : 1296675
+  Total amount : $91222428.90
+  Average      : $70.35
+  Maximum      : $28948.90
+  Top 5 by category:
+    grocery_pos                   $14460822.38
+    shopping_pos                  $9307993.61
+    shopping_net                  $8625149.68
+    gas_transport                 $8351732.29
+    home                          $7173928.11
+  Top 5 by state:
+    TX                            $6800917.53
+    NY                            $6006499.03
+    PA                            $5771009.53
+    CA                            $4138078.51
+    OH                            $3396146.66
+-------------------------
+
+[Hint] Run '/Users/zimayang/CLionProjects/MCP_final/cmake-build-debug/MCP_final report' to merge all results and generate report.html
+[DataLoader] Loaded 1296675 transactions from /Users/zimayang/CLionProjects/MCP_final/data/credit_card_transactions.csv
+[ResultIO] Saved MPI-4 → results/mpi.result
+
+[MPI – 4 ranks]
+--- Analytics Summary ---
+  Record count : 1296675
+  Total amount : $91222428.90
+  Average      : $70.35
+  Maximum      : $28948.90
+  Top 5 by category:
+    grocery_pos                   $14460822.38
+    shopping_pos                  $9307993.61
+    shopping_net                  $8625149.68
+    gas_transport                 $8351732.29
+    home                          $7173928.11
+  Top 5 by state:
+    TX                            $6800917.53
+    NY                            $6006499.03
+    PA                            $5771009.53
+    CA                            $4138078.51
+    OH                            $3396146.66
+-------------------------
+
+[Hint] Run '/Users/zimayang/CLionProjects/MCP_final/cmake-build-debug/MCP_final report' to merge all results and generate report.html
+[DataLoader] Loaded 1296675 transactions from /Users/zimayang/CLionProjects/MCP_final/data/credit_card_transactions.csv
+[ResultIO] Saved MPI-8 → results/mpi.result
+
+[MPI – 8 ranks]
+--- Analytics Summary ---
+  Record count : 1296675
+  Total amount : $91222428.90
+  Average      : $70.35
+  Maximum      : $28948.90
+  Top 5 by category:
+    grocery_pos                   $14460822.38
+    shopping_pos                  $9307993.61
+    shopping_net                  $8625149.68
+    gas_transport                 $8351732.29
+    home                          $7173928.11
+  Top 5 by state:
+    TX                            $6800917.53
+    NY                            $6006499.03
+    PA                            $5771009.53
+    CA                            $4138078.51
+    OH                            $3396146.66
+-------------------------
+
+[Hint] Run '/Users/zimayang/CLionProjects/MCP_final/cmake-build-debug/MCP_final report' to merge all results and generate report.html
+[DataLoader] Loaded 1296675 transactions from /Users/zimayang/CLionProjects/MCP_final/data/credit_card_transactions.csv
+[ResultIO] Saved Hybrid-MPI-2xOMP-2 → results/hybrid.result
+
+[Hybrid – 2 MPI ranks × 2 OpenMP threads]
+--- Analytics Summary ---
+  Record count : 1296675
+  Total amount : $91222428.90
+  Average      : $70.35
+  Maximum      : $28948.90
+  Top 5 by category:
+    grocery_pos                   $14460822.38
+    shopping_pos                  $9307993.61
+    shopping_net                  $8625149.68
+    gas_transport                 $8351732.29
+    home                          $7173928.11
+  Top 5 by state:
+    TX                            $6800917.53
+    NY                            $6006499.03
+    PA                            $5771009.53
+    CA                            $4138078.51
+    OH                            $3396146.66
+-------------------------
+
+[Hint] Run '/Users/zimayang/CLionProjects/MCP_final/cmake-build-debug/MCP_final report' to merge all results and generate report.html
+[DataLoader] Loaded 1296675 transactions from /Users/zimayang/CLionProjects/MCP_final/data/credit_card_transactions.csv
+[ResultIO] Saved Hybrid-MPI-2xOMP-4 → results/hybrid.result
+
+[Hybrid – 2 MPI ranks × 4 OpenMP threads]
+--- Analytics Summary ---
+  Record count : 1296675
+  Total amount : $91222428.90
+  Average      : $70.35
+  Maximum      : $28948.90
+  Top 5 by category:
+    grocery_pos                   $14460822.38
+    shopping_pos                  $9307993.61
+    shopping_net                  $8625149.68
+    gas_transport                 $8351732.29
+    home                          $7173928.11
+  Top 5 by state:
+    TX                            $6800917.53
+    NY                            $6006499.03
+    PA                            $5771009.53
+    CA                            $4138078.51
+    OH                            $3396146.66
+-------------------------
+
+[Hint] Run '/Users/zimayang/CLionProjects/MCP_final/cmake-build-debug/MCP_final report' to merge all results and generate report.html
