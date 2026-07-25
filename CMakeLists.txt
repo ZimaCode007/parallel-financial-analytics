@@ -41,6 +41,7 @@ set(SOURCES
     src/analytics.cpp
     src/omp_engine.cpp
     src/mpi_engine.cpp
+    src/hybrid_engine.cpp
     src/performance.cpp
     src/report_generator.cpp
     src/result_io.cpp

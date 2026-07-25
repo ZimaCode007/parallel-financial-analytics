@@ -6,6 +6,46 @@ A high-performance financial transaction analytics engine implemented in C++, le
 
 ---
 
+## Quick Start: Scripts
+
+Build the project once before using either script:
+
+```bash
+cmake --build cmake-build-debug
+```
+
+### `run.sh` — Run the full analytics workflow
+
+Edit the configuration block at the top of `run.sh` to select the dataset,
+row limit, sampling ratio, and parallelism settings.  The script runs the
+sequential, OpenMP, MPI, and Hybrid modes, then generates a combined HTML
+report.
+
+```bash
+./run.sh
+```
+
+The report is written to `cmake-build-debug/report.html`.
+
+### `run_benchmarks.sh` — Collect benchmark data for charts
+
+This script does not generate an HTML report.  It runs one sequential
+baseline, OpenMP and MPI with 2/4/8 workers, plus Hybrid configurations
+`MPI-2 × OMP-2` and `MPI-2 × OMP-4`.  It calculates speedup for every run and
+writes CSV data and logs to `benchmark_results/<timestamp>/`.
+
+```bash
+./run_benchmarks.sh
+```
+
+For a quick small-data validation:
+
+```bash
+MAX_ROWS=10000 ./run_benchmarks.sh
+```
+
+---
+
 ## Overview
 
 Modern financial institutions generate millions of transaction records daily. Sequential processing becomes a bottleneck at scale. This project implements a parallel analytics engine that:
@@ -21,7 +61,7 @@ Modern financial institutions generate millions of transaction records daily. Se
 
 ```
 MCP_final/
-├── main.cpp                    # Entry point — orchestrates all three execution modes
+├── main.cpp                    # Entry point — orchestrates sequential, OpenMP, MPI, and hybrid modes
 ├── CMakeLists.txt              # Build configuration (OpenMP + MPI)
 ├── data/                       # Place IBM dataset CSV files here (not tracked by git)
 ├── include/
@@ -31,6 +71,7 @@ MCP_final/
 │   ├── analytics.h             # Aggregation functions (SUM/AVG/MAX/COUNT/GroupBy)
 │   ├── omp_engine.h            # OpenMP parallel engine interface
 │   ├── mpi_engine.h            # MPI distributed engine interface
+│   ├── hybrid_engine.h         # Two-level MPI + OpenMP engine interface
 │   └── performance.h           # Timer and performance report interface
 └── src/
     ├── data_loader.cpp         # CSV parser with quoted-field support
@@ -38,6 +79,7 @@ MCP_final/
     ├── analytics.cpp           # Pure aggregation implementations
     ├── omp_engine.cpp          # OpenMP parallel execution
     ├── mpi_engine.cpp          # MPI scatter/gather execution
+    ├── hybrid_engine.cpp       # MPI distribution plus local OpenMP execution
     └── performance.cpp         # Speedup/efficiency table printer
 ```
 
@@ -50,6 +92,7 @@ MCP_final/
 | **Analytics** | Stateless functions operating on raw pointer ranges — composable with all engines |
 | **OpenMP Engine** | Assigns index ranges to threads; uses `#pragma omp critical` for scalar reduction and per-thread maps for group-by |
 | **MPI Engine** | Rank 0 scatters `PackedTx` structs via `MPI_Scatterv`; all ranks compute locally; rank 0 gathers via `MPI_Gatherv` with custom map serialisation |
+| **Hybrid Engine** | MPI distributes records between processes; each process invokes the OpenMP engine for its local partition; rank 0 merges all partial results |
 | **Performance** | Wall-clock `Timer` (nanosecond resolution), `RunStats` record, formatted table with Speedup S(p) = T_seq/T_par and Efficiency E(p) = S(p)/p |
 
 ---
@@ -117,26 +160,38 @@ The binary is produced at `build/MCP_final`.
 ## Usage
 
 ```
-./MCP_final <csv_path> [max_rows] [omp_threads]
+./MCP_final <csv_path> <seq|omp|mpi|hybrid|all> [max_rows] [omp_threads] [sample_ratio]
+./MCP_final report
 ```
 
 | Argument | Default | Description |
 |---|---|---|
-| `csv_path` | required | Path to the transactions CSV file |
+| `csv_path` | required | Path to the transactions CSV file (`report` is a standalone mode) |
+| `mode` | required | `seq`, `omp`, `mpi`, `hybrid`, or `all` |
 | `max_rows` | `0` (all) | Limit number of rows loaded (useful for testing) |
 | `omp_threads` | `0` (auto) | Number of OpenMP threads |
 
-### Run all three modes (sequential + OpenMP + MPI)
+### Run all modes
 
 ```bash
-# Single node — sequential and OpenMP run automatically; MPI uses 1 process
-./build/MCP_final data/transactions.csv
+# Single node — runs sequential, OpenMP, MPI, and hybrid (with 1 MPI rank)
+./build/MCP_final data/transactions.csv all
 
 # MPI with 4 processes (+ sequential and OpenMP on rank 0)
-mpirun -np 4 ./build/MCP_final data/transactions.csv
+mpirun -np 4 ./build/MCP_final data/transactions.csv all
 
 # Limit to 500 000 rows, use 8 OpenMP threads, 4 MPI ranks
-mpirun -np 4 ./build/MCP_final data/transactions.csv 500000 8
+mpirun -np 4 ./build/MCP_final data/transactions.csv all 500000 8
+```
+
+### Run hybrid MPI + OpenMP only
+
+MPI partitions the records between processes, and each process uses the given
+number of OpenMP threads for its partition.
+
+```bash
+# 4 MPI processes, each with 8 OpenMP threads
+mpirun -np 4 ./build/MCP_final data/transactions.csv hybrid 500000 8
 ```
 
 ---
