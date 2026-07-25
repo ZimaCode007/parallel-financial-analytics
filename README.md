@@ -258,3 +258,13 @@ Experiments vary dataset size and thread/process count to analyse scalability ac
 ## License
 
 For academic use only (course project). Dataset terms follow the IBM/Kaggle dataset license.
+
+---
+
+## AI Assistance Declaration
+
+The overall module design, system architecture, and function interfaces were
+designed by the project team. AI tools were used as assistance for parts of the
+internal implementation of selected functions and for generating the HTML
+reporting component. All AI-assisted output was reviewed, integrated, and
+validated by the project team.
