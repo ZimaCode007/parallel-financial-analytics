@@ -3,16 +3,15 @@
 #include <algorithm>
 
 /**
- * 将交易记录数组按数量均分为 num_parts 个连续子数组（深拷贝）。
+ * Divide the transaction array into num_parts contiguous sub-arrays (deep copy).
  *
- * 当总数不能整除时，靠前的分区各多分配一条记录，
- * 保证所有分区大小差距不超过 1。
- * 适用于 MPI：各 rank 需要独立的数据副本。
+ * When the total is not evenly divisible, earlier partitions each receive one
+ * extra record so all partition sizes differ by at most 1.
+ * Suitable for MPI where each rank needs an independent data copy.
  *
- * @param records    完整交易记录数组（只读，不修改原数据）
- * @param num_parts  目标分区数；若大于 records.size() 则自动收窄
- * @return           num_parts 个 Transaction 向量构成的向量；
- *                   每个子向量对应一个数据分区
+ * @param records    Full transaction array (read-only; original is not modified).
+ * @param num_parts  Desired number of partitions; clamped to records.size() if larger.
+ * @return           Vector of num_parts Transaction vectors, one per partition.
  */
 std::vector<std::vector<Transaction>> DataPartitioner::partition(
     const std::vector<Transaction>& records,
@@ -35,16 +34,16 @@ std::vector<std::vector<Transaction>> DataPartitioner::partition(
 }
 
 /**
- * 计算将 total_size 个元素均分为 num_parts 份时各份的索引区间。
+ * Compute the [start, end) index ranges for dividing total_size elements
+ * into num_parts equal (±1) partitions.
  *
- * 返回值中每个元素为 {start, end}，区间为左闭右开 [start, end)。
- * 不复制任何数据，适用于 OpenMP 等共享内存场景：
- * 线程直接用区间索引访问同一个原始数组。
+ * No data is copied, making this suitable for OpenMP shared-memory use:
+ * threads access the same underlying array via their assigned index range.
  *
- * @param total_size  待分区的元素总数
- * @param num_parts   目标分区数；若大于 total_size 则自动收窄
- * @return            长度为 num_parts 的 {start, end} 对向量，
- *                    所有区间连续不重叠，合并后恰好覆盖 [0, total_size)
+ * @param total_size  Total number of elements to partition.
+ * @param num_parts   Desired number of partitions; clamped to total_size if larger.
+ * @return            Vector of num_parts {start, end} pairs — contiguous,
+ *                    non-overlapping, and together covering [0, total_size).
  */
 std::vector<std::pair<size_t, size_t>> DataPartitioner::partition_ranges(
     size_t total_size,
